@@ -1,4 +1,3 @@
-
 import telebot
 import requests
 import os
@@ -25,6 +24,11 @@ def get_tiktok_video(url):
 @bot.message_handler(func=lambda message: True)
 def handle_link(message):
     url = message.text.strip()
+
+    if "instagram.com" in url:
+        bot.reply_to(message, "ميزة تحميل Instagram غير متاحة حالياً بسبب قيود في الوصول المباشر للفيديو. سيتم دعمها لاحقًا.")
+        return
+
     if "tiktok.com" not in url:
         bot.reply_to(message, "الرجاء إرسال رابط TikTok فقط.")
         return
