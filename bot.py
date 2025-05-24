@@ -3,13 +3,47 @@ import requests
 import os
 from flask import Flask, request
 
-API_TOKEN = os.getenv("BOT_TOKEN")
+API_TOKEN = os.getenv("BOT_TOKEN") or 'YOUR_TELEGRAM_BOT_TOKEN'
+ADMIN_ID = int(os.getenv("ADMIN_ID") or 123456789)
+
 bot = telebot.TeleBot(API_TOKEN)
 server = Flask(__name__)
 
+# تسجيل المستخدمين
+USER_FILE = "users.txt"
+
+def load_user_ids():
+    if os.path.exists(USER_FILE):
+        with open(USER_FILE, "r") as f:
+            return set(map(int, f.read().splitlines()))
+    return set()
+
+def save_user_id(user_id):
+    if user_id not in user_ids:
+        with open(USER_FILE, "a") as f:
+            f.write(f"{user_id}\n")
+        user_ids.add(user_id)
+
+user_ids = load_user_ids()
+
 @bot.message_handler(commands=['start', 'help'])
 def send_welcome(message):
+    save_user_id(message.chat.id)
     bot.reply_to(message, "مرحباً! أرسل رابط فيديو TikTok وسأرسله لك بدون علامة مائية.")
+
+@bot.message_handler(commands=['broadcast'])
+def broadcast(message):
+    if message.chat.id != ADMIN_ID:
+        return
+    text = message.text.replace('/broadcast', '').strip()
+    if not text:
+        bot.reply_to(message, "اكتب الرسالة بعد الأمر /broadcast")
+        return
+    for uid in user_ids:
+        try:
+            bot.send_message(uid, text)
+        except Exception as e:
+            print(f"فشل الإرسال للمستخدم {uid}: {e}")
 
 def get_tiktok_video(url):
     try:
@@ -24,6 +58,7 @@ def get_tiktok_video(url):
 @bot.message_handler(func=lambda message: True)
 def handle_link(message):
     url = message.text.strip()
+    save_user_id(message.chat.id)
 
     if "instagram.com" in url:
         bot.reply_to(message, "ميزة تحميل Instagram غير متاحة حالياً بسبب قيود في الوصول المباشر للفيديو. سيتم دعمها لاحقًا.")
